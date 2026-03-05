@@ -1,0 +1,17 @@
+# Ignorar as bases de dados (Protecao de dados sensiveis)
+Base de Dados.xlsx
+Base_de_Dados.xlsx
+*.csv
+
+# Ignorar o Ambiente Virtual (Arquivos pesados)
+.venv/
+venv/
+env/
+
+# Arquivos temporarios do Python
+__pycache__/
+*.pyc
+
+# Variaveis de ambiente
+.env
+.streamlit/secrets.toml
