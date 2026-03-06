@@ -59,7 +59,7 @@ TEMAS = {
         # scatter marker border
         "dot_bdr":     "#0f1117",
         # quadrant lines
-        "quad_line":   "#2a3650",
+        "quad_line":   "rgba(255, 255, 255, 0.5)",
     },
     "claro": {
         "bg":          "#f5f6fa",
@@ -86,7 +86,7 @@ TEMAS = {
         "scroll_thumb":"#cbd5e1",
         "sec_bdr":     "#e2e8f0",
         "dot_bdr":     "#f5f6fa",
-        "quad_line":   "#cbd5e1",
+        "quad_line":   "#d511be",
     },
 }
 
@@ -440,19 +440,57 @@ with tabs[3]:
         st.plotly_chart(fr, use_container_width=True)
 
     with r2:
-        rt = df.groupby("tema_p").agg(vol=("tema_p","count"),irc=("vl_irc_score","mean"),
-            tx_nres=("resolvido",lambda x:1-x.mean())).reset_index()
-        fm = go.Figure(go.Scatter(x=rt["vol"],y=rt["irc"],mode="markers+text",
-            text=rt["tema_p"],textposition="top center",textfont=dict(size=9),
-            marker=dict(size=rt["tx_nres"]*80+10,color=rt["irc"],
+        rt = df.groupby("tema_p").agg(vol=("tema_p","count"),irc=("vl_irc_score","mean")).reset_index()
+        
+        # Calculando as médias
+        media_vol = rt["vol"].mean()
+        media_irc = rt["irc"].mean()
+        
+        # --- MÁGICA PARA CENTRALIZAR A CRUZ ---
+        # 1. Descobrimos a maior distância entre a média e as bolinhas extremas
+        max_dist_vol = max(media_vol - rt["vol"].min(), rt["vol"].max() - media_vol)
+        max_dist_irc = max(media_irc - rt["irc"].min(), rt["irc"].max() - media_irc)
+        
+        # 2. Adicionamos 10% de folga para as bolinhas não grudarem na borda
+        margem_vol = max_dist_vol * 1.2 if max_dist_vol > 0 else 10
+        margem_irc = max_dist_irc * 1.2 if max_dist_irc > 0 else 10
+        
+        fm = go.Figure(go.Scatter(
+            x=rt["vol"],
+            y=rt["irc"],
+            mode="markers+text",
+            text=rt["tema_p"],
+            textposition="top center",
+            textfont=dict(size=8),
+            # Bolinhas do mesmo tamanho (14)
+            marker=dict(size=14, color=rt["irc"],
                 colorscale=[[0,"#10b981"],[0.5,"#f59e0b"],[1,"#ef4444"]],
-                showscale=True,colorbar=dict(title="IRC Médio",thickness=12),
-                line=dict(color=T["dot_bdr"],width=1),opacity=0.85),
-            hovertemplate="<b>%{text}</b><br>Vol: %{x}<br>IRC: %{y:.1f}<extra></extra>"))
-        fm.add_hline(y=rt["irc"].median(),line=dict(color=T["quad_line"],dash="dot"))
-        fm.add_vline(x=rt["vol"].median(),line=dict(color=T["quad_line"],dash="dot"))
-        fm.add_annotation(x=rt["vol"].max(),y=rt["irc"].max(),text="⚠ Prioridade Máxima",showarrow=False,font=dict(color="#ef4444",size=11))
-        fm.update_layout(title="Matriz de Risco · Volume × IRC",xaxis_title="Volume",yaxis_title="IRC Médio",height=420,**PT)
+                showscale=True, colorbar=dict(title="IRC Médio", thickness=15),
+                line=dict(color=T["dot_bdr"], width=1), opacity=0.85),
+            hovertemplate="<b>%{text}</b><br>Vol: %{x}<br>IRC: %{y:.1f}<extra></extra>"
+        ))
+        
+        # Desenhando a cruz com as médias
+        fm.add_hline(y=media_irc, line=dict(color=T["quad_line"], dash="dot", width=0.8))
+        fm.add_vline(x=media_vol, line=dict(color=T["quad_line"], dash="dot", width=0.8))
+        
+        fm.add_annotation(x=rt["vol"].max(), y=rt["irc"].max(), text="⚠ Prioridade Máxima", showarrow=False, font=dict(color="#ef4444", size=11))
+        
+        fm.update_layout(
+            title="Matriz de Risco · Volume × IRC",
+            xaxis_title="Volume",
+            yaxis_title="IRC Médio",
+            height=480,
+            # Removendo grade de fundo E a linha do zero
+            xaxis_showgrid=False,
+            yaxis_showgrid=False,
+            xaxis_zeroline=False,
+            yaxis_zeroline=False,
+            # Forçando a cruz a ficar no centro exato da tela
+            xaxis_range=[media_vol - margem_vol, media_vol + margem_vol],
+            yaxis_range=[media_irc - margem_irc, media_irc + margem_irc],
+            **PT
+        )
         st.plotly_chart(fm, use_container_width=True)
 
 # ══ PÁG 5 ═══════════════════════════════════
