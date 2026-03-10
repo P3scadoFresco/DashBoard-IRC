@@ -4,21 +4,36 @@ import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
 from datetime import datetime
+from PIL import Image
+import io
 
 # ─────────────────────────────────────────────
 #  CONFIGURAÇÃO GERAL
 # ─────────────────────────────────────────────
 st.set_page_config(
-    page_title="Carteira e Custo",
+    page_title="Dashboard 2.1 · Carteira e Custo",
+    page_icon="🏥",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # ─────────────────────────────────────────────
-#  TEMA: escuro / claro
+#  TEMA: escuro / claro com paleta corporativa
 # ─────────────────────────────────────────────
 if "tema" not in st.session_state:
     st.session_state.tema = "escuro"
+
+# Cores corporativas: Azuis e Branco
+CORES_CORP = {
+    "azul_escuro": "#003D7A",
+    "azul_medio": "#0066CC",
+    "azul_claro": "#4D94FF",
+    "azul_muito_claro": "#E6F0FF",
+    "branco": "#FFFFFF",
+    "cinza_claro": "#F5F7FA",
+    "cinza_medio": "#B0B8C1",
+    "cinza_escuro": "#4A5568",
+}
 
 TEMAS = {
     "escuro": {
@@ -44,26 +59,26 @@ TEMAS = {
         "sec_bdr":     "#1e2535",
     },
     "claro": {
-        "bg":          "#f5f6fa",
-        "sidebar_bg":  "#ffffff",
-        "sidebar_bdr": "#e2e8f0",
-        "card_bg":     "linear-gradient(135deg,#ffffff 0%,#f0f4ff 100%)",
-        "card_bdr":    "#dde3f0",
-        "tabs_bg":     "#eef1f8",
-        "tab_sel_bg":  "#ffffff",
-        "text":        "#1e2a3a",
-        "text_label":  "#64748b",
-        "text_sub":    "#94a3b8",
-        "text_val":    "#0f172a",
-        "tab_color":   "#64748b",
-        "tab_sel":     "#2563eb",
-        "pt_font":     "#475569",
-        "pt_grid":     "#e2e8f0",
-        "pt_line":     "#cbd5e1",
-        "pt_text_out": "#475569",
-        "scroll_track":"#f1f5f9",
-        "scroll_thumb":"#cbd5e1",
-        "sec_bdr":     "#e2e8f0",
+        "bg":          CORES_CORP["branco"],
+        "sidebar_bg":  CORES_CORP["cinza_claro"],
+        "sidebar_bdr": CORES_CORP["azul_muito_claro"],
+        "card_bg":     f"linear-gradient(135deg,{CORES_CORP['branco']} 0%,{CORES_CORP['azul_muito_claro']} 100%)",
+        "card_bdr":    CORES_CORP["azul_claro"],
+        "tabs_bg":     CORES_CORP["cinza_claro"],
+        "tab_sel_bg":  CORES_CORP["branco"],
+        "text":        CORES_CORP["cinza_escuro"],
+        "text_label":  CORES_CORP["azul_escuro"],
+        "text_sub":    CORES_CORP["cinza_medio"],
+        "text_val":    CORES_CORP["azul_escuro"],
+        "tab_color":   CORES_CORP["cinza_medio"],
+        "tab_sel":     CORES_CORP["azul_escuro"],
+        "pt_font":     CORES_CORP["azul_escuro"],
+        "pt_grid":     CORES_CORP["azul_muito_claro"],
+        "pt_line":     CORES_CORP["azul_claro"],
+        "pt_text_out": CORES_CORP["azul_escuro"],
+        "scroll_track":CORES_CORP["cinza_claro"],
+        "scroll_thumb":CORES_CORP["azul_claro"],
+        "sec_bdr":     CORES_CORP["azul_claro"],
     },
 }
 
@@ -76,16 +91,16 @@ def aplicar_tema():
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
   html, body, [class*="css"] {{ font-family: 'DM Sans', sans-serif; }}
   .stApp {{ background: {T['bg']}; color: {T['text']}; }}
-  [data-testid="stSidebar"] {{ background: {T['sidebar_bg']}; border-right: 1px solid {T['sidebar_bdr']}; }}
+  [data-testid="stSidebar"] {{ background: {T['sidebar_bg']}; border-right: 2px solid {T['sidebar_bdr']}; }}
 
   .kpi-card {{
     background: {T['card_bg']};
-    border: 1px solid {T['card_bdr']}; border-radius: 12px;
+    border: 2px solid {T['card_bdr']}; border-radius: 12px;
     padding: 18px 22px; position: relative; overflow: hidden; height: 110px;
-    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    box-shadow: 0 2px 8px rgba(0,0,0,.1);
   }}
-  .kpi-card::before {{ content:''; position:absolute; top:0; left:0; right:0; height:3px; }}
-  .kpi-card.azul::before    {{ background: linear-gradient(90deg,#3b82f6,#60a5fa); }}
+  .kpi-card::before {{ content:''; position:absolute; top:0; left:0; right:0; height:4px; }}
+  .kpi-card.azul::before    {{ background: linear-gradient(90deg,{CORES_CORP['azul_escuro']},{CORES_CORP['azul_claro']}); }}
   .kpi-card.verde::before   {{ background: linear-gradient(90deg,#10b981,#34d399); }}
   .kpi-card.laranja::before {{ background: linear-gradient(90deg,#f59e0b,#fbbf24); }}
   .kpi-card.vermelho::before{{ background: linear-gradient(90deg,#ef4444,#f87171); }}
@@ -96,15 +111,19 @@ def aplicar_tema():
   .kpi-sub   {{ font-size:11px; color:{T['text_sub']}; margin-top:4px; }}
 
   .section-title {{ font-size:12px; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
-    color:{T['text_label']}; padding-bottom:8px; border-bottom:1px solid {T['sec_bdr']}; margin-bottom:14px; }}
+    color:{T['text_label']}; padding-bottom:8px; border-bottom:2px solid {T['sec_bdr']}; margin-bottom:14px; }}
 
   .stTabs [data-baseweb="tab-list"] {{ background:{T['tabs_bg']}; border-radius:8px; padding:4px; gap:4px; }}
   .stTabs [data-baseweb="tab"] {{ border-radius:6px; color:{T['tab_color']}; font-weight:500; }}
-  .stTabs [aria-selected="true"] {{ background:{T['tab_sel_bg']} !important; color:{T['tab_sel']} !important; }}
+  .stTabs [aria-selected="true"] {{ background:{T['tab_sel_bg']} !important; color:{T['tab_sel']} !important; border-bottom: 3px solid {CORES_CORP['azul_escuro']}; }}
 
   ::-webkit-scrollbar {{ width:6px; }}
   ::-webkit-scrollbar-track {{ background:{T['scroll_track']}; }}
   ::-webkit-scrollbar-thumb {{ background:{T['scroll_thumb']}; border-radius:3px; }}
+
+  .status-critico {{ color: #ef4444; font-weight: 700; }}
+  .status-atencao {{ color: #f59e0b; font-weight: 700; }}
+  .status-normal {{ color: #10b981; font-weight: 700; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -142,14 +161,14 @@ def carregar(raw_bytes, nome):
     return df
 
 # ─────────────────────────────────────────────
-#  SIDEBAR
+#  SIDEBAR COM LOGO
 # ─────────────────────────────────────────────
 with st.sidebar:
-    col_title, col_toggle = st.columns([3, 1]) #Dashboard 2.0
+    col_title, col_toggle = st.columns([3, 1])
     with col_title:
         st.markdown(f"""<div style='padding:8px 0 20px'>
-          <div style='font-size:20px;font-weight:700;color:{T["text_val"]}'> CARTEIRA E CUSTO ASSISTENCIAL</div> 
-          <div style='font-size:11px;color:{T["text_sub"]};margin-top:4px'>Dashboard 2.0</div>
+          <div style='font-size:20px;font-weight:700;color:{CORES_CORP["azul_claro"]}'> Dashboard 2.1</div>
+          <div style='font-size:11px;color:{T["text_sub"]};margin-top:4px'>CARTEIRA E CUSTO ASSISTENCIAL</div>
         </div>""", unsafe_allow_html=True)
     with col_toggle:
         eh_escuro = st.session_state.tema == "escuro"
@@ -159,7 +178,7 @@ with st.sidebar:
             st.rerun()
 
     sec("Fonte de Dados")
-    arquivo = st.file_uploader("Carregar Base_Teste_Carteira_Custo.xlsx", type=["xlsx","xls","csv"])
+    arquivo = st.file_uploader("Carregar Base_Teste_Carteira_Custo_V2.xlsx", type=["xlsx","xls","csv"])
 
     if arquivo is None:
         st.info("⬆️ Faça upload do arquivo de base para começar.")
@@ -191,9 +210,17 @@ with st.sidebar:
     df = df_raw[mask].copy()
 
 # ─────────────────────────────────────────────
-#  LAYOUT PRINCIPAL
+#  LAYOUT PRINCIPAL - 7 ABAS
 # ─────────────────────────────────────────────
-tabs = st.tabs(["📊 Visão Geral", "👥 Carteira", "💰 Custo Assistencial", "🔍 Investigação"])
+tabs = st.tabs([
+    "📊 Visão Geral", 
+    "👥 Carteira de Beneficiários", 
+    "💰 Custo Assistencial", 
+    "🏥 Prestadores e Procedimentos",
+    "📈 Vendas e Canais",
+    "❌ Cancelamentos",
+    "🔍 Investigação"
+])
 
 # --- TAB 1: VISÃO GERAL ---
 with tabs[0]:
@@ -217,7 +244,7 @@ with tabs[0]:
         fig_plano.update_layout(**PT)
         st.plotly_chart(fig_plano, use_container_width=True)
 
-# --- TAB 2: CARTEIRA ---
+# --- TAB 2: CARTEIRA DE BENEFICIÁRIOS ---
 with tabs[1]:
     sec("Análise Demográfica")
     c1, c2 = st.columns([1, 1])
@@ -234,7 +261,7 @@ with tabs[1]:
         f_counts = df_f["Faixa"].value_counts().sort_index()
         
         fig_pir = go.Figure()
-        fig_pir.add_trace(go.Bar(y=labels, x=m_counts.values, name="Masc", orientation='h', marker_color='#3b82f6'))
+        fig_pir.add_trace(go.Bar(y=labels, x=m_counts.values, name="Masc", orientation='h', marker_color=CORES_CORP["azul_escuro"]))
         fig_pir.add_trace(go.Bar(y=labels, x=-f_counts.values, name="Fem", orientation='h', marker_color='#ef4444'))
         fig_pir.update_layout(title="Pirâmide Etária", barmode='overlay', **PT)
         st.plotly_chart(fig_pir, use_container_width=True)
@@ -244,6 +271,20 @@ with tabs[1]:
         fig_geo = px.treemap(df, path=['Estado', 'Cidade', 'Bairro'], values='Idade', title="Hierarquia Geográfica (Drill-down)")
         fig_geo.update_layout(**PT)
         st.plotly_chart(fig_geo, use_container_width=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    sec("Distribuição por Grupo de Plano")
+    c1, c2 = st.columns(2)
+    with c1:
+        grupo_plan = df["Grupo_Plano"].value_counts().reset_index()
+        fig_grupo = px.bar(grupo_plan, x="Grupo_Plano", y="count", title="Beneficiários por Grupo de Plano")
+        fig_grupo.update_layout(**PT)
+        st.plotly_chart(fig_grupo, use_container_width=True)
+    with c2:
+        parentesco = df["Parentesco"].value_counts().reset_index()
+        fig_parent = px.bar(parentesco, x="Parentesco", y="count", title="Distribuição por Parentesco")
+        fig_parent.update_layout(**PT)
+        st.plotly_chart(fig_parent, use_container_width=True)
 
 # --- TAB 3: CUSTO ASSISTENCIAL ---
 with tabs[2]:
@@ -267,14 +308,93 @@ with tabs[2]:
         fig_proc.update_layout(**PT)
         st.plotly_chart(fig_proc, use_container_width=True)
 
-# --- TAB 4: INVESTIGAÇÃO ---
+    st.markdown("<br>", unsafe_allow_html=True)
+    sec("Custo por Prestador (com Sparklines)")
+    prestador_custo = df.groupby("Prestador")["Custo_Assistencial"].agg(['sum', 'mean', 'count']).sort_values('sum', ascending=False).reset_index()
+    prestador_custo.columns = ['Prestador', 'Custo Total', 'Custo Médio', 'Qtd Atendimentos']
+    
+    fig_prest = px.bar(prestador_custo, x="Prestador", y="Custo Total", title="Custo Total por Prestador")
+    fig_prest.update_layout(**PT)
+    st.plotly_chart(fig_prest, use_container_width=True)
+
+# --- TAB 4: PRESTADORES E PROCEDIMENTOS ---
 with tabs[3]:
+    sec("Análise de Prestadores")
+    c1, c2 = st.columns(2)
+    with c1:
+        prest_freq = df["Prestador"].value_counts().reset_index()
+        fig_prest_freq = px.pie(prest_freq, names="Prestador", values="count", title="Frequência de Atendimentos por Prestador")
+        fig_prest_freq.update_layout(**PT)
+        st.plotly_chart(fig_prest_freq, use_container_width=True)
+    with c2:
+        proc_freq = df["Procedimento"].value_counts().reset_index()
+        fig_proc_freq = px.pie(proc_freq, names="Procedimento", values="count", title="Frequência de Procedimentos")
+        fig_proc_freq.update_layout(**PT)
+        st.plotly_chart(fig_proc_freq, use_container_width=True)
+
+# --- TAB 5: VENDAS E CANAIS ---
+with tabs[4]:
+    sec("Análise de Vendas e Canais")
+    c1, c2 = st.columns(2)
+    with c1:
+        canal_vendas = df["Canal_Venda"].value_counts().reset_index()
+        fig_canal = px.bar(canal_vendas, x="Canal_Venda", y="count", title="Beneficiários por Canal de Venda")
+        fig_canal.update_layout(**PT)
+        st.plotly_chart(fig_canal, use_container_width=True)
+    with c2:
+        vendedor_perf = df.groupby("Vendedor")["Valor_Venda"].sum().sort_values(ascending=False).head(10).reset_index()
+        fig_vend = px.bar(vendedor_perf, x="Vendedor", y="Valor_Venda", title="Top 10 Vendedores por Valor Total")
+        fig_vend.update_layout(**PT)
+        st.plotly_chart(fig_vend, use_container_width=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    sec("Performance por Supervisor")
+    supervisor_perf = df.groupby("Supervisor").agg({"Beneficiário_ID": "count", "Valor_Venda": "sum"}).reset_index()
+    supervisor_perf.columns = ["Supervisor", "Qtd Beneficiários", "Valor Total"]
+    fig_super = px.bar(supervisor_perf, x="Supervisor", y=["Qtd Beneficiários", "Valor Total"], barmode='group', title="Performance por Supervisor")
+    fig_super.update_layout(**PT)
+    st.plotly_chart(fig_super, use_container_width=True)
+
+# --- TAB 6: CANCELAMENTOS ---
+with tabs[5]:
+    sec("Análise de Cancelamentos")
+    df_cancel = df[df["Ativo"] == "Não"].copy()
+    
+    k1, k2, k3 = st.columns(3)
+    with k1: kpi("Total Cancelados", fmt_n(len(df_cancel)), f"{len(df_cancel)/len(df)*100:.1f}% da base", "vermelho")
+    with k2: kpi("Motivo Mais Frequente", df_cancel["Motivo_Cancelamento"].value_counts().index[0] if len(df_cancel) > 0 else "N/A", "análise", "laranja")
+    with k3: kpi("Taxa de Cancelamento", f"{len(df_cancel)/len(df)*100:.1f}%", "no período", "vermelho")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1:
+        motivos = df_cancel["Motivo_Cancelamento"].value_counts().reset_index()
+        fig_motivos = px.bar(motivos, x="Motivo_Cancelamento", y="count", title="Motivos de Cancelamento")
+        fig_motivos.update_layout(**PT)
+        st.plotly_chart(fig_motivos, use_container_width=True)
+    with c2:
+        cancel_por_plano = df_cancel["Plano"].value_counts().reset_index()
+        fig_cancel_plano = px.pie(cancel_por_plano, names="Plano", values="count", title="Cancelamentos por Plano")
+        fig_cancel_plano.update_layout(**PT)
+        st.plotly_chart(fig_cancel_plano, use_container_width=True)
+
+# --- TAB 7: INVESTIGAÇÃO ---
+with tabs[6]:
     sec("Investigação de Casos e Status")
     
-    # Lógica de Status (Simulada para o exemplo)
+    # Lógica de Score de Risco (Crítico, Atenção, Normal)
     df_inv = df.copy()
-    # Definir um "Risco" baseado no custo e idade
-    df_inv["Score_Risco"] = (df_inv["Custo_Assistencial"] / df_inv["Custo_Assistencial"].max() * 70) + (df_inv["Idade"] / 100 * 30)
+    
+    # Calcular percentis para normalização
+    p75_custo = df_inv["Custo_Assistencial"].quantile(0.75)
+    p90_custo = df_inv["Custo_Assistencial"].quantile(0.90)
+    p75_idade = df_inv["Idade"].quantile(0.75)
+    p90_idade = df_inv["Idade"].quantile(0.90)
+    
+    # Score de Risco = (Custo normalizado * 0.6) + (Idade normalizada * 0.4)
+    df_inv["Score_Custo"] = df_inv["Custo_Assistencial"] / df_inv["Custo_Assistencial"].max() * 100
+    df_inv["Score_Idade"] = df_inv["Idade"] / 100 * 100
+    df_inv["Score_Risco"] = (df_inv["Score_Custo"] * 0.6) + (df_inv["Score_Idade"] * 0.4)
     
     def get_status(score):
         if score > 60: return "🔴 Crítico"
@@ -293,16 +413,17 @@ with tabs[3]:
     if prestador_f != "Todos": df_inv = df_inv[df_inv["Prestador"] == prestador_f]
     if busca: df_inv = df_inv[df_inv["Beneficiário_ID"].str.contains(busca, case=False)]
     
-    cols_show = ["Status", "Beneficiário_ID", "Idade", "Sexo", "Plano", "Prestador", "Procedimento", "Custo_Assistencial"]
-    st.dataframe(df_inv[cols_show].sort_values("Custo_Assistencial", ascending=False), 
+    cols_show = ["Status", "Beneficiário_ID", "Idade", "Sexo", "Plano", "Prestador", "Procedimento", "Custo_Assistencial", "Score_Risco"]
+    st.dataframe(df_inv[cols_show].sort_values("Score_Risco", ascending=False), 
                  use_container_width=True, hide_index=True,
                  column_config={
                      "Custo_Assistencial": st.column_config.NumberColumn("Custo", format="R$ %.2f"),
+                     "Score_Risco": st.column_config.NumberColumn("Score Risco", format="%.1f"),
                      "Status": st.column_config.TextColumn("Status", width="small")
                  })
     
     st.markdown("<br>", unsafe_allow_html=True)
-    sec("Detalhes do Beneficiário")
+    sec("Detalhes do Beneficiário e Lógica de Classificação")
     ben_sel = st.selectbox("Selecionar Beneficiário para Detalhes", ["—"] + df_inv["Beneficiário_ID"].tolist())
     
     if ben_sel != "—":
@@ -314,13 +435,30 @@ with tabs[3]:
             **Idade:** {detalhe['Idade']} anos  
             **Sexo:** {detalhe['Sexo']}  
             **Plano:** {detalhe['Plano']}  
-            **Local:** {detalhe['Bairro']}, {detalhe['Cidade']} - {detalhe['Estado']}
+            **Local:** {detalhe['Bairro']}, {detalhe['Cidade']} - {detalhe['Estado']}  
+            **Custo Assistencial:** {fmt_m(detalhe['Custo_Assistencial'])}
             """)
         with d2:
             st.markdown(f"**Análise de Risco:** {detalhe['Status']}")
+            st.markdown(f"**Score de Risco:** {detalhe['Score_Risco']:.1f}/100")
+            
+            # Explicação da lógica
+            st.markdown("---")
+            st.markdown("**Como é calculado o Status:**")
+            st.markdown(f"""
+- **Score de Custo:** {detalhe['Score_Custo']:.1f}/100 (peso 60%)
+- **Score de Idade:** {detalhe['Score_Idade']:.1f}/100 (peso 40%)
+- **Score Final:** ({detalhe['Score_Custo']:.1f} × 0.6) + ({detalhe['Score_Idade']:.1f} × 0.4) = **{detalhe['Score_Risco']:.1f}**
+
+**Classificação:**
+- 🔴 **Crítico:** Score > 60 → Requer auditoria imediata
+- 🟡 **Atenção:** Score 40-60 → Monitorar recorrência
+- 🟢 **Normal:** Score < 40 → Dentro dos parâmetros esperados
+            """)
+            
             if detalhe['Status'] == "🔴 Crítico":
-                st.error(f"Este beneficiário apresenta um custo assistencial elevado ({fmt_m(detalhe['Custo_Assistencial'])}) associado ao perfil etário. Recomenda-se auditoria no prestador {detalhe['Prestador']}.")
+                st.error(f"⚠️ Este beneficiário apresenta um custo assistencial elevado ({fmt_m(detalhe['Custo_Assistencial'])}) associado ao perfil etário ({detalhe['Idade']} anos). Recomenda-se auditoria no prestador {detalhe['Prestador']}.")
             elif detalhe['Status'] == "🟡 Atenção":
-                st.warning(f"Beneficiário com utilização acima da média. Monitorar recorrência de {detalhe['Procedimento']}.")
+                st.warning(f"⚠️ Beneficiário com utilização acima da média. Monitorar recorrência de {detalhe['Procedimento']}.")
             else:
-                st.success("Utilização dentro dos parâmetros esperados para o perfil.")
+                st.success("✓ Utilização dentro dos parâmetros esperados para o perfil.")
